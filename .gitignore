@@ -1,0 +1,28 @@
+# Ignore all files
+*
+
+# But don't ignore directories, so we can recurse into them
+!*/
+
+# Unignore C++ source files
+!*.cpp
+!*.hpp
+!*.h
+!*.cc
+!*.cxx
+!*.hh
+
+# Unignore C source files
+!*.c
+!*.h
+
+# Unignore CUDA source files
+!*.cu
+!*.cuh
+
+# Unignore Python source files
+!*.py
+
+# Unignore CMakeLists.txt
+!CMakeLists.txt
+!*.cmake
