@@ -176,18 +176,13 @@ private:
 
   __aicore__ inline void Compute(const LocalTensor<float> &c1Local, int tileK) {
     LocalTensor<half> b2Local = inQueueB2.DeQue<half>();
-    pipe_barrier(PIPE_ALL);
     LocalTensor<half> a2Local = inQueueA2.DeQue<half>();
-    pipe_barrier(PIPE_ALL);
-    pipe_barrier(PIPE_ALL);
     Mmad<float, half, half>(c1Local, a2Local, b2Local,
                             {uint16_t(16), uint16_t(16), uint16_t(16),
                              tileK > 0, 0, false, false, false});
     pipe_barrier(PIPE_ALL);
     inQueueB2.FreeTensor(b2Local);
-    pipe_barrier(PIPE_ALL);
     inQueueA2.FreeTensor(a2Local);
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void CopyOut(int tileN, int tileM) {
