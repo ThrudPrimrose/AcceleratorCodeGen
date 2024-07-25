@@ -29,12 +29,12 @@
       {
         "format": "ND",
         "shape": [],
-        "type": "float16"
+        "type": "float32"
       },
       {
         "format": "ND",
         "shape": [],
-        "type": "float16"
+        "type": "float32"
       }
     ],
     "output_desc": [
@@ -44,7 +44,7 @@
           64,
           64
         ],
-        "type": "float16"
+        "type": "float32"
       }
     ],
     "attr": [
