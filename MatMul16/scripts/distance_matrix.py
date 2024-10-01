@@ -36,7 +36,8 @@ matmul_indices = {name: idx for idx, name in enumerate(matmuls)}
 
 # Initialize an empty distance matrix
 num_matmuls = len(matmuls)
-distance_matrix = np.zeros((num_matmuls, num_matmuls))
+distance_matrix = np.full((num_matmuls, num_matmuls), -1.0)
+pd.options.display.float_format = '{:.10f}'.format
 
 # Populate the distance matrix with the max absolute differences
 for mat1, mat2, diff in matches:
