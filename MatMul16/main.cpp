@@ -1,8 +1,3 @@
-/*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
- * This file constains code of cpu debug and npu code.We read data from bin file
- * and write result to file.
- */
 #include "matmul_custom_tiling.h"
 
 #include <cassert>
@@ -20,13 +15,15 @@
 
 constexpr uint32_t dim = 64;
 
-#define CHECK_ACL(x)                                                           \
-  do {                                                                         \
-    aclError __ret = x;                                                        \
-    if (__ret != ACL_ERROR_NONE) {                                             \
-      std::cerr << __FILE__ << ":" << __LINE__ << " aclError:" << __ret        \
-                << std::endl;                                                  \
-    }                                                                          \
+#define CHECK_ACL(x)                                                    \
+  do                                                                    \
+  {                                                                     \
+    aclError __ret = x;                                                 \
+    if (__ret != ACL_ERROR_NONE)                                        \
+    {                                                                   \
+      std::cerr << __FILE__ << ":" << __LINE__ << " aclError:" << __ret \
+                << std::endl;                                           \
+    }                                                                   \
   } while (0);
 
 #ifndef __CCE_KT_TEST__
@@ -38,7 +35,8 @@ extern void matmul_custom_do(uint32_t numPE, void *l2ctrl, void *stream,
                              MatMulCustomTilingData *data);
 #endif
 
-int32_t main(int32_t argc, char *argv[]) {
+int32_t main(int32_t argc, char *argv[])
+{
   size_t inputByteSize = dim * dim * sizeof(uint16_t);
   size_t outputByteSize = dim * dim * sizeof(float);
 
@@ -52,23 +50,27 @@ int32_t main(int32_t argc, char *argv[]) {
   char absolute_path[PATH_MAX];
   char *last_slash = nullptr;
   // Convert the relative path to an absolute path
-  if (realpath(relative_path, absolute_path) != NULL) {
+  if (realpath(relative_path, absolute_path) != NULL)
+  {
     std::cout << "Absolute path of the compiled file: " << absolute_path
               << std::endl;
     last_slash = strrchr(absolute_path, '/');
 
-    if (last_slash != NULL) {
+    if (last_slash != NULL)
+    {
       // Terminate the string at the last slash to get the directory path
       *last_slash = '\0';
     }
-
-  } else {
+  }
+  else
+  {
     std::cerr << "Error resolving absolute path." << std::endl;
   }
   std::string absolute_path_str(absolute_path);
   std::string A_path = absolute_path_str + "/Data/A.bin";
   std::string B_path = absolute_path_str + "/Data/B.bin";
   std::string C_ref_path = absolute_path_str + "/Data/C_ref.bin";
+  std::string C_half_ref_path = absolute_path_str + "/Data/C_half_ref.bin";
   std::string C_path = absolute_path_str + "/Data/C.txt";
   std::string C_aclblas_path = absolute_path_str + "/Data/C_aclblas.txt";
 
@@ -91,6 +93,7 @@ int32_t main(int32_t argc, char *argv[]) {
   uint8_t *zHost;
   uint8_t *zHost2;
   float *cRefHost = new float[dim * dim];
+  aclFloat16 *cHalfRefHost = new aclFloat16[dim * dim];
   // void *workSpaceHost;
   uint8_t *xDevice, *yDevice;
   uint8_t *zDevice;
@@ -132,12 +135,16 @@ int32_t main(int32_t argc, char *argv[]) {
   readMatrixFromBinaryFile(xHost, A_path, dim, dim, sizeof(aclFloat16));
   readMatrixFromBinaryFile(yHost, B_path, dim, dim, sizeof(aclFloat16));
   readMatrixFromBinaryFile(cRefHost, C_ref_path, dim, dim, sizeof(float));
+  readMatrixFromBinaryFile(cHalfRefHost, C_half_ref_path, dim, dim, sizeof(aclFloat16));
 
   bool all_zero = true;
-  for (int i = 0; i < dim; i++) {
-    for (int j = 0; j < dim; j++) {
+  for (int i = 0; i < dim; i++)
+  {
+    for (int j = 0; j < dim; j++)
+    {
       aclFloat16 f = xHost[i * dim + j];
-      if (aclFloat16ToFloat(f) != 0.f) {
+      if (aclFloat16ToFloat(f) != 0.f)
+      {
         all_zero = false;
         break;
       }
@@ -146,10 +153,13 @@ int32_t main(int32_t argc, char *argv[]) {
   assert(!all_zero);
 
   all_zero = true;
-  for (int i = 0; i < dim; i++) {
-    for (int j = 0; j < dim; j++) {
+  for (int i = 0; i < dim; i++)
+  {
+    for (int j = 0; j < dim; j++)
+    {
       aclFloat16 f = yHost[i * dim + j];
-      if (aclFloat16ToFloat(f) != 0.f) {
+      if (aclFloat16ToFloat(f) != 0.f)
+      {
         all_zero = false;
         break;
       }
@@ -226,7 +236,7 @@ int32_t main(int32_t argc, char *argv[]) {
   float maxRelDiff = 0.0f;
   maxDifference((float *)zHost, (float *)zHost2, dim * dim, maxAbsDiff,
                 maxRelDiff);
-  std::cout << "Between impl. matmul and cblas matmul \nmax abs difference is: "
+  std::cout << "Between impl. matmul and aclblas matmul \nmax abs difference is: "
             << maxAbsDiff << "\n"
             << "max rel difference is: " << maxRelDiff << "%" << std::endl;
   maxDifference((float *)cRefHost, (float *)zHost, dim * dim, maxAbsDiff,
@@ -234,19 +244,21 @@ int32_t main(int32_t argc, char *argv[]) {
   std::cout << "Between impl. matmul and numpy matmul \nmax abs difference is: "
             << maxAbsDiff << "\n"
             << "max rel difference is: " << maxRelDiff << "%" << std::endl;
+  maxDifference((aclFloat16 *)cHalfRefHost, (float *)zHost, dim * dim, maxAbsDiff,
+                maxRelDiff);
+  std::cout << "Between impl. matmul and numpy matmul fp 16 \nmax abs difference is: "
+            << maxAbsDiff << "\n"
+            << "max rel difference is: " << maxRelDiff << "%" << std::endl;
   maxDifference((float *)cRefHost, (float *)zHost2, dim * dim, maxAbsDiff,
                 maxRelDiff);
-  std::cout
-      << "Between aclblas matmul and numpy matmul \nmax abs difference is: "
-      << maxAbsDiff << "\n"
-      << "max rel difference is: " << maxRelDiff << "%" << std::endl;
-  size_t k1 = hash_matrix((float *)zHost, dim, dim);
-  size_t k2 = hash_matrix((float *)zHost2, dim, dim);
-  size_t k3 = hash_matrix((float *)cRefHost, dim, dim);
-  std::cout << "Hand written kernel's resulting output hashed: " << k1
-            << std::endl;
-  std::cout << "AclBlas kernel's resulting output hashed: " << k2 << std::endl;
-  std::cout << "Numpy kernel's resulting output hashed: " << k3 << std::endl;
+  std::cout << "Between aclblas matmul and numpy matmul \nmax abs difference is: "
+            << maxAbsDiff << "\n"
+            << "max rel difference is: " << maxRelDiff << "%" << std::endl;
+  maxDifference((aclFloat16 *)cHalfRefHost, (float *)zHost2, dim * dim, maxAbsDiff,
+                maxRelDiff);
+  std::cout << "Between aclblas matmul and numpy fp16 matmul \nmax abs difference is: "
+            << maxAbsDiff << "\n"
+            << "max rel difference is: " << maxRelDiff << "%" << std::endl;
 
   writeNumbersToTextFile(C_path, (float *)zHost, dim, dim);
   writeNumbersToTextFile(C_aclblas_path, (float *)zHost2, dim, dim);
@@ -264,6 +276,7 @@ int32_t main(int32_t argc, char *argv[]) {
   CHECK_ACL(aclFinalize());
 
   delete[] cRefHost;
+  delete[] cHalfRefHost;
 #else
 #endif
   return 0;

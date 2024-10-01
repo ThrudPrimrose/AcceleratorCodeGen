@@ -50,25 +50,17 @@ public:
       for (int tileN = 0; tileN < numIterN; tileN++) {
         // We need 16x16 tile for the C Matrix we are multiplying
         LocalTensor<float> c1Local = outQueueCO1.AllocTensor<float>();
-        pipe_barrier(PIPE_ALL);
 
         for (int tileK = 0; tileK < numIterK; tileK++) {
           CopyIn(tileK, tileN, tileM);
-          pipe_barrier(PIPE_ALL);
           SplitA();
-          pipe_barrier(PIPE_ALL);
           SplitB();
-          pipe_barrier(PIPE_ALL);
           Compute(c1Local, tileK);
-          pipe_barrier(PIPE_ALL);
         }
 
         LocalTensor<float> c2Local = outQueueCO2.AllocTensor<float>();
-        pipe_barrier(PIPE_ALL);
         Aggregate(c1Local, c2Local);
-        pipe_barrier(PIPE_ALL);
         CopyOut(tileN, tileM);
-        pipe_barrier(PIPE_ALL);
       }
     }
   }
@@ -87,7 +79,6 @@ private:
     // In dst, the distance is 0
     DataCopy(dst[dstOffset], src[srcOffset],
              {16, 1, uint16_t((k / 16) - 1), 0});
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void CopyBND2NZ(LocalTensor<half> &dst,
@@ -97,32 +88,23 @@ private:
     uint32_t dstOffset = 0;
     DataCopy(dst[dstOffset], src[srcOffset],
              {16, 1, uint16_t((n / 16) - 1), 0});
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void CopyIn(uint32_t tileK, uint32_t tileN,
                                 uint32_t tileM) {
     LocalTensor<half> a1Local = inQueueA1.AllocTensor<half>();
-    pipe_barrier(PIPE_ALL);
     LocalTensor<half> b1Local = inQueueB1.AllocTensor<half>();
-    pipe_barrier(PIPE_ALL);
     // Transfer ND to NZ or whatever
     CopyAND2NZ(a1Local, aGm, tileK, tileN, tileM);
-    pipe_barrier(PIPE_ALL);
     CopyBND2NZ(b1Local, bGm, tileK, tileN, tileM);
-    pipe_barrier(PIPE_ALL);
 
     inQueueA1.EnQue(a1Local);
-    pipe_barrier(PIPE_ALL);
     inQueueB1.EnQue(b1Local);
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void SplitA() {
     LocalTensor<half> a1Local = inQueueA1.DeQue<half>();
-    pipe_barrier(PIPE_ALL);
     LocalTensor<half> a2Local = inQueueA2.AllocTensor<half>();
-    pipe_barrier(PIPE_ALL);
 
     LoadData2dParams loadDataParams;
     loadDataParams.repeatTimes = 1;
@@ -130,18 +112,13 @@ private:
     loadDataParams.ifTranspose = false;
 
     LoadData(a2Local, a1Local, loadDataParams);
-    pipe_barrier(PIPE_ALL);
     inQueueA2.EnQue<half>(a2Local);
-    pipe_barrier(PIPE_ALL);
     inQueueA1.FreeTensor(a1Local);
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void SplitB() {
     LocalTensor<half> b1Local = inQueueB1.DeQue<half>();
-    pipe_barrier(PIPE_ALL);
     LocalTensor<half> b2Local = inQueueB2.AllocTensor<half>();
-    pipe_barrier(PIPE_ALL);
 
     LoadData2dParams loadDataParams;
     loadDataParams.repeatTimes = 1;
@@ -149,17 +126,13 @@ private:
     loadDataParams.ifTranspose = true;
 
     LoadData(b2Local, b1Local, loadDataParams);
-    pipe_barrier(PIPE_ALL);
     inQueueB2.EnQue<half>(b2Local);
-    pipe_barrier(PIPE_ALL);
     inQueueB1.FreeTensor(b1Local);
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void Aggregate(LocalTensor<float> &c1Local,
                                    LocalTensor<float> &c2Local) {
     outQueueCO2.EnQue<float>(c2Local);
-    pipe_barrier(PIPE_ALL);
 
     DataCopyParams dataCopyParams;
     dataCopyParams.blockCount = 1;
@@ -168,10 +141,8 @@ private:
     enhancedParams.blockMode = BlockMode::BLOCK_MODE_MATRIX;
 
     DataCopy(c2Local, c1Local, dataCopyParams, enhancedParams);
-    pipe_barrier(PIPE_ALL);
 
     outQueueCO1.FreeTensor(c1Local);
-    pipe_barrier(PIPE_ALL);
   }
 
   __aicore__ inline void Compute(const LocalTensor<float> &c1Local, int tileK) {
