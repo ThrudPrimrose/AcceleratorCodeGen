@@ -4,6 +4,7 @@ M,K,N=16,64,16
 
 A=np.random.rand(M,K)
 B=np.random.rand(K,N)
+# r
 
 Afp16=A.astype(np.float16)
 Bfp16=B.astype(np.float16)
