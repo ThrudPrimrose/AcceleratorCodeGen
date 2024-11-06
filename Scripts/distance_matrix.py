@@ -20,7 +20,7 @@ max rel difference is: 0.0482109%
 Between aclblas matmul and numpy fp16 matmul
 max abs difference is: 0.0625
 max rel difference is: 0.37037%
-"""
+""".replace("numpy matmul fp 16", "numpy fp16 matmul")
 
 # Regular expression to find pairs and their max absolute differences
 pattern = re.compile(r"Between (.*?) and (.*?)\nmax abs difference is: ([\d.e+-]+)")
@@ -37,7 +37,6 @@ matmul_indices = {name: idx for idx, name in enumerate(matmuls)}
 # Initialize an empty distance matrix
 num_matmuls = len(matmuls)
 distance_matrix = np.full((num_matmuls, num_matmuls), -1.0)
-pd.options.display.float_format = '{:.10f}'.format
 
 # Populate the distance matrix with the max absolute differences
 for mat1, mat2, diff in matches:
