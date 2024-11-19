@@ -1,4 +1,21 @@
-find_program(CMAKE_CCE_COMPILER NAMES "ccec" PATHS "$ENV{PATH}" DOC "CCE Compiler")
+set(HOST_TRIPLET "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}")
+string(TOLOWER "${HOST_TRIPLET}" HOST_TRIPLET_LOWER)
+
+find_program(CMAKE_CCE_COMPILER
+    NAMES "ccec"
+    PATHS
+        "$ENV{ASCEND_HOME_PATH}/compiler/bin"
+        "$ENV{ASCEND_INSTALL_PATH}/compiler/bin"
+        "$ENV{ASCEND_HOME_PATH}/ccec_compiler/bin"
+        "$ENV{ASCEND_INSTALL_PATH}/ccec_compiler/bin"
+        "$ENV{ASCEND_HOME_PATH}/${HOST_TRIPLET_LOWER}/compiler/bin"
+        "$ENV{ASCEND_INSTALL_PATH}/${HOST_TRIPLET_LOWER}/compiler/bin"
+        "$ENV{ASCEND_HOME_PATH}/${HOST_TRIPLET_LOWER}/ccec_compiler/bin"
+        "$ENV{ASCEND_INSTALL_PATH}/${HOST_TRIPLET_LOWER}/ccec_compiler/bin"
+        "$ENV{PATH}"
+    DOC "CCE Compiler"
+)
+
 include(CMakeCCEFunction)
 
 mark_as_advanced(CMAKE_CCE_COMPILER)
@@ -71,8 +88,9 @@ set(_CMAKE_CCE_HOST_IMPLICIT_LINK_DIRECTORIES
     ${_CMAKE_ASCEND_INSTALL_PATH}/tools/tikicpulib/lib/${PRODUCT_UPPER}
 )
 
-# link library
-set(_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES stdc++)
+# link library (does not have to be libstdc++, can be libc++)
+set(_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES ${CMAKE_CXX_STANDARD_LIBRARIES})
+
 if(ASCEND_RUN_MODE STREQUAL "ONBOARD")
     list(APPEND _CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES runtime)
 elseif(ASCEND_RUN_MODE STREQUAL "SIMULATOR")
@@ -107,6 +125,7 @@ set(_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES
     ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/tikcpp/tikcfw/impl
     ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/tikcpp/tikcfw/interface
     ${_CMAKE_ASCEND_INSTALL_PATH}/tools/tikicpulib/lib/include
+    ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/include
 )
 set(__IMPLICIT_INCLUDES)
 foreach(inc ${_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES})

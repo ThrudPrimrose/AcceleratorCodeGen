@@ -230,7 +230,6 @@ void __dace_runkernel_copy_map_outer_0_0_6(ascendc_test_3_state_t *__state, uint
 void __dace_runkernel_copy_map_outer_0_0_6(ascendc_test_3_state_t *__state, uint8_t* ascend_A, uint8_t* ascend_B, uint8_t* ascend_C)
 {
     #ifndef __CCE_KT_TEST__
-
     copy_map_outer_0_0_6<<<32, nullptr, nullptr>>>(reinterpret_cast<GM_ADDR>(ascend_A), reinterpret_cast<GM_ADDR>(ascend_B), reinterpret_cast<GM_ADDR>(ascend_C));
 
     DACE_ACL_CHECK(aclrtSynchronizeDevice());
