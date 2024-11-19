@@ -1,6 +1,7 @@
 /* DaCe AUTO-GENERATED FILE. DO NOT MODIFY */
 #include "common.h"
 #include <cstring>
+#include <mutex>
 struct ascendc_test_3_state_t {
     dace::ascendc::Context *acl_context;
 };
@@ -14,6 +15,8 @@ int main()
     ascendc_test_3_state_t __state;
     std::cout << "A00" << std::endl;
     __dace_init_ascendc(&__state);
+    std::mutex mtx;
+    mtx.lock();
     {
         std::cout << "A0" << std::endl;
         aclFloat16 *A; // 8
@@ -90,8 +93,8 @@ int main()
         }
         std::free(A);
         std::free(B);
-
     }
+    mtx.unlock();
 }
 
  void __program_ascendc_test_3(ascendc_test_3_state_t *__state)
