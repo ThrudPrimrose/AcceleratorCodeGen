@@ -15,6 +15,7 @@ find_program(CMAKE_CCE_COMPILER
         "$ENV{PATH}"
     DOC "CCE Compiler"
 )
+set(ASCEND_INSTALL_PATH "$ENV{ASCEND_HOME_PATH}")
 
 include(CMakeCCEFunction)
 
@@ -88,9 +89,8 @@ set(_CMAKE_CCE_HOST_IMPLICIT_LINK_DIRECTORIES
     ${_CMAKE_ASCEND_INSTALL_PATH}/tools/tikicpulib/lib/${PRODUCT_UPPER}
 )
 
-# link library (does not have to be libstdc++, can be libc++)
-set(_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES ${CMAKE_CXX_STANDARD_LIBRARIES})
-
+# link library
+set(_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES stdc++)
 if(ASCEND_RUN_MODE STREQUAL "ONBOARD")
     list(APPEND _CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES runtime)
 elseif(ASCEND_RUN_MODE STREQUAL "SIMULATOR")
@@ -106,6 +106,15 @@ else()
     )
 endif()
 list(APPEND _CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES ascendcl)
+
+if(ASCEND_CUSTOM_TILING STREQUAL "CUSTOM_TILING")
+elseif(ASCEND_CUSTOM_TILING STREQUAL "NO_CUSTOM_TILING")
+else()
+    message(FATAL_ERROR
+        "ASCEND_CUSTOM_TILING: ${ASCEND_CUSTOM_TILING}\n"
+        "ASCEND_CUSTOM_TILING must be one of the following: CUSTOM_TILING or NO_CUSTOM_TILING"
+    )
+endif()
 
 set(__IMPLICIT_LINKS)
 foreach(dir ${_CMAKE_CCE_HOST_IMPLICIT_LINK_DIRECTORIES})
@@ -125,7 +134,6 @@ set(_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES
     ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/tikcpp/tikcfw/impl
     ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/tikcpp/tikcfw/interface
     ${_CMAKE_ASCEND_INSTALL_PATH}/tools/tikicpulib/lib/include
-    ${_CMAKE_ASCEND_INSTALL_PATH}/compiler/include
 )
 set(__IMPLICIT_INCLUDES)
 foreach(inc ${_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES})

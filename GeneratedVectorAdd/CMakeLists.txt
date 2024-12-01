@@ -13,12 +13,15 @@ set(SOC_VERSION "ascend910" CACHE STRING "Choose SoC Version")
 set(ASCEND_PRODUCT_TYPE ${SOC_VERSION})
 
 set(ASCEND_CORE_TYPE "AiCore")
+set(ASCEND_CUSTOM_TILING "NO_CUSTOM_TILING")
 
 set(CCE_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 list(APPEND CMAKE_MODULE_PATH ${CCE_CMAKE_PATH})
-project(kernel_samples LANGUAGES CCE CXX)
+project(kernel_samples LANGUAGES CCE)
 
 set(smoke_testcase runner)
 
-add_subdirectory(cmake/cpu)
+#set(CMAKE_CXX_SOURCE_FILE_EXTENSIONS cpp)
+set(CMAKE_CCE_SOURCE_FILE_EXTENSIONS cce cpp)
+
 add_subdirectory(cmake/npu)

@@ -1,17 +1,17 @@
 # npu
 file(GLOB KERNEL_FILES
-    ${CMAKE_SOURCE_DIR}/*.cpp
+    ${CMAKE_SOURCE_DIR}/*.cce
 )
-list(REMOVE_ITEM KERNEL_FILES "${CMAKE_SOURCE_DIR}/main.cpp")
 set_source_files_properties(${KERNEL_FILES} PROPERTIES LANGUAGE CCE)
 
 file(GLOB MAIN_FILES
-    ${CMAKE_SOURCE_DIR}/main.cpp
+    ${CMAKE_SOURCE_DIR}/*.cpp
 )
 set_source_files_properties(${MAIN_FILES} PROPERTIES LANGUAGE CCE)
 
-# ===================================================================
-# exe mode: build a executable directly
+
+
+
 add_executable(${smoke_testcase}_npu
     ${KERNEL_FILES}
     ${MAIN_FILES}
@@ -39,11 +39,6 @@ set_target_properties(${smoke_testcase}_npu PROPERTIES
 
 # ===================================================================
 # so mode: build a shared library first, and dynamic link to build a executable
-file(GLOB KERNEL_FILES
-    ${CMAKE_SOURCE_DIR}/*.cpp
-)
-list(REMOVE_ITEM KERNEL_FILES "${CMAKE_SOURCE_DIR}/main.cpp")
-
 add_library(ascendc_kernels SHARED
     ${KERNEL_FILES}
 )

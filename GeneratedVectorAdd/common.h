@@ -1,12 +1,14 @@
 // Copyright 2019-2021 ETH Zurich and the DaCe authors. All rights reserved.
 #pragma once
 
+#ifndef __CCE_KT_TEST__
 #include "acl/acl.h"
 
 #include <iostream>
 
 #define GM_HALF __gm__ half* __restrict__
 #define GM_FLOAT __gm__ float* __restrict__
+#define GM_ADDR __gm__ uint8_t* __restrict__
 
 #define DACE_ACL_CHECK(x)                                               \
   do {                                                                  \
@@ -38,3 +40,4 @@ struct Context {
 
 }  // namespace ascendc
 }  // namespace dace
+#endif
