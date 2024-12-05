@@ -35,11 +35,26 @@ file(GLOB HOST_FILES
 )
 set_source_files_properties(${HOST_FILES} PROPERTIES LANGUAGE CCE)
 
+execute_process(
+    COMMAND which ${CMAKE_CXX_COMPILER}
+    RESULT_VARIABLE WHICH_RESULT
+    OUTPUT_VARIABLE GCC_PATH
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
+if(NOT WHICH_RESULT EQUAL 0)
+    message(FATAL_ERROR "which ${CMAKE_CXX_COMPILER} not found. "
+    "Please make sure it is installed and available in the PATH."
+    "And set CMAKE_CXX_COMPILER=g++")
+endif()
+
+get_filename_component(GCC_PATH "${GCC_PATH}" DIRECTORY)
+get_filename_component(GCC_TOOLCHAIN_PATH "${GCC_PATH}" DIRECTORY)
 
 # ===================================================================
 add_library(ascendc_kernels SHARED
-    ${KERNEL_FILES}
+    ${KERNEL_FILES} vadd.cpp
 )
 target_compile_definitions(ascendc_kernels PUBLIC
     TILING_KEY_VAR=0
@@ -47,8 +62,9 @@ target_compile_definitions(ascendc_kernels PUBLIC
 
 target_compile_options(ascendc_kernels PUBLIC
     -O2
-    -std=c++20
+    -std=c++17
     -fPIC
+    --gcc-toolchain=${GCC_TOOLCHAIN_PATH}
 )
 target_compile_features(ascendc_kernels PUBLIC cxx_std_17)
 
@@ -58,9 +74,10 @@ add_library(${smoke_testcase}_lib_npu SHARED
 )
 target_compile_features(${smoke_testcase}_lib_npu PUBLIC cxx_std_17)
 
+
 target_compile_options(${smoke_testcase}_lib_npu PUBLIC
     -O2
-    -std=c++20
+    -std=c++17
     -fPIC
 )
 
@@ -70,9 +87,7 @@ target_link_directories(${smoke_testcase}_lib_npu PUBLIC
 )
 
 target_link_libraries(${smoke_testcase}_lib_npu PUBLIC
-    -Wl,--whole-archive
     ascendc_kernels
-    -Wl,--no-whole-archive
     acl_cblas
 )
 
@@ -83,7 +98,7 @@ add_executable(${smoke_testcase}_npu
 
 target_compile_options(${smoke_testcase}_npu PUBLIC
     -O2
-    -std=c++20
+    -std=c++17
     -fPIC
 )
 target_compile_features(${smoke_testcase}_npu PUBLIC cxx_std_17)
@@ -109,7 +124,7 @@ target_compile_features(stub_library PUBLIC cxx_std_17)
 
 target_compile_options(stub_library PRIVATE
     -O2
-    -std=c++20
+    -std=c++17
     -fPIC
 )
 
@@ -119,9 +134,7 @@ find_library(ASCENDCL_RUNTIME_LIB runtime HINTS ${DACE_ASCEND_INSTALL_PATH}/runt
 
 target_link_libraries(stub_library PUBLIC
     ${smoke_testcase}_lib_npu
-    -Wl,--whole-archive
     ascendc_kernels
-    -Wl,--no-whole-archive
     dl
     ascendcl
     runtime

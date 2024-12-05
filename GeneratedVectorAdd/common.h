@@ -1,7 +1,6 @@
 // Copyright 2019-2021 ETH Zurich and the DaCe authors. All rights reserved.
 #pragma once
 
-#ifndef __CCE_KT_TEST__
 #include "acl/acl.h"
 
 #include <iostream>
@@ -40,4 +39,3 @@ struct Context {
 
 }  // namespace ascendc
 }  // namespace dace
-#endif
