@@ -27,6 +27,23 @@ if(NOT CMAKE_CCE_CREATE_SHARED_MODULE)
   set(CMAKE_CCE_CREATE_SHARED_MODULE ${CMAKE_CCE_CREATE_SHARED_LIBRARY})
 endif()
 
+find_program(CMAKE_AR NAMES ar PATHS
+    /usr/bin
+    /usr/local/bin
+    ${ASCEND_HOME_PATH}/toolkit/bin
+    ${ASCEND_HOME_PATH}/compiler/bin
+)
+
+if(NOT CMAKE_AR)
+    message(FATAL_ERROR "ar command not found. Please specify the full path to the ar executable.")
+endif()
+
+
+set(CMAKE_CCE_CREATE_STATIC_LIBRARY
+    "<CMAKE_AR> qc <TARGET> <OBJECTS>"
+    CACHE STRING "Command to create static library with CCE compiler"
+)
+
 if(NOT CMAKE_CCE_LINK_EXECUTABLE)
   set(CMAKE_CCE_LINK_EXECUTABLE
     "<CMAKE_CCE_COMPILER> ${CMAKE_LIBRARY_CREATE_CCE_FLAGS} <FLAGS> <CMAKE_CCE_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>${__IMPLICIT_LINKS}")
