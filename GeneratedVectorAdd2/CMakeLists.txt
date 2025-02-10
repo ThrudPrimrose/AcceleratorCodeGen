@@ -18,22 +18,39 @@ set(ASCEND_CUSTOM_TILING "NO_CUSTOM_TILING")
 
 set(CCE_CMAKE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
 list(APPEND CMAKE_MODULE_PATH ${CCE_CMAKE_PATH})
-project(kernel_samples LANGUAGES CCE)
+project(kernel_samples LANGUAGES CXX CCE)
 
 set(smoke_testcase runner)
 
-set(CMAKE_CCE_SOURCE_FILE_EXTENSIONS cce cpp)
+set(CMAKE_CCE_SOURCE_FILE_EXTENSIONS cce)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 file(GLOB KERNEL_FILES
     vadd.cce
 )
-set_source_files_properties(${KERNEL_FILES} PROPERTIES LANGUAGE CCE)
+set_source_files_properties(vadd.cce PROPERTIES LANGUAGE CCE)
+set_source_files_properties(vadd.cpp PROPERTIES LANGUAGE CXX)
 
 file(GLOB HOST_FILES
     main.cpp
 )
-set_source_files_properties(${HOST_FILES} PROPERTIES LANGUAGE CCE)
+#set_source_files_properties(${HOST_FILES} PROPERTIES LANGUAGE CCE)
+set_source_files_properties(main.cpp PROPERTIES LANGUAGE CXX)
+
+get_property(CCE_INCLUDE_DIRS DIRECTORY PROPERTY INCLUDE_DIRECTORIES)
+get_property(CCE_LINK_DIRS DIRECTORY PROPERTY LINK_DIRECTORIES)
+
+# Debug (optional) to see what was retrieved
+message(STATUS "CCE Include Directories: ${CCE_INCLUDE_DIRS} ${_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES}")
+message(STATUS "CCE Link Directories: ${CCE_LINK_DIRS}")
+message(STATUS "CCE Link Directories: ${CCE_IMPLICIT_LINK_DIRS} ${_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES} ${_CMAKE_CCE_HOST_IMPLICIT_LINK_DIRECTORIEs}")
+# Step 2: Append these directories to the global properties for CXX
+set_property(DIRECTORY APPEND PROPERTY INCLUDE_DIRECTORIES ${CCE_INCLUDE_DIRS})
+set_property(DIRECTORY APPEND PROPERTY LINK_DIRECTORIES ${CCE_LINK_DIRS})
+
+link_directories(${_CMAKE_CCE_HOST_IMPLICIT_LINK_DIRECTORIES})
+include_directories(${_CMAKE_CCE_HOST_IMPLICIT_INCLUDE_DIRECTORIES})
+link_libraries(${_CMAKE_CCE_HOST_IMPLICIT_LINK_LIBRARIES})
 
 execute_process(
     COMMAND which ${CMAKE_CXX_COMPILER}
@@ -54,7 +71,7 @@ get_filename_component(GCC_TOOLCHAIN_PATH "${GCC_PATH}" DIRECTORY)
 
 # ===================================================================
 add_library(ascendc_kernels SHARED
-    ${KERNEL_FILES} vadd.cpp
+    vadd.cce
 )
 target_compile_definitions(ascendc_kernels PUBLIC
     TILING_KEY_VAR=0
@@ -64,13 +81,15 @@ target_compile_options(ascendc_kernels PUBLIC
     -O2
     -std=c++17
     -fPIC
-    --gcc-toolchain=${GCC_TOOLCHAIN_PATH}
 )
 target_compile_features(ascendc_kernels PUBLIC cxx_std_17)
-
+target_link_libraries(ascendc_kernels PUBLIC
+    ascendcl
+    runtime
+)
 # ===================================================================
 add_library(${smoke_testcase}_lib_npu SHARED
-    ${HOST_FILES}
+    vadd.cpp main.cpp
 )
 target_compile_features(${smoke_testcase}_lib_npu PUBLIC cxx_std_17)
 
@@ -93,7 +112,7 @@ target_link_libraries(${smoke_testcase}_lib_npu PUBLIC
 
 # ===================================================================
 add_executable(${smoke_testcase}_npu
-    ${HOST_FILES}
+    vadd.cpp main.cpp
 )
 
 target_compile_options(${smoke_testcase}_npu PUBLIC
@@ -115,6 +134,7 @@ target_link_libraries(${smoke_testcase}_npu PRIVATE
 file(GLOB STUB_FILES
     ${CMAKE_SOURCE_DIR}/stub.cpp
 )
+set_source_files_properties(${CMAKE_SOURCE_DIR}/stub.cpp PROPERTIES LANGUAGE CXX)
 
 add_library(stub_library SHARED
     ${STUB_FILES}

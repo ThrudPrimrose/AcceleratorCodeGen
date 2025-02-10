@@ -1,7 +1,8 @@
 /* DaCe AUTO-GENERATED FILE. DO NOT MODIFY */
-#ifndef __CCE_KT_TEST__
+
 #include "common.h"
 #include <cstring>
+#include <chrono>
 
 struct ascendc_test_3_state_t {
     dace::ascendc::Context *acl_context;
@@ -63,7 +64,12 @@ extern "C" int main()
         DACE_ACL_CHECK(aclrtMemcpy(ascend_B, 8192 * 8192 * sizeof(aclFloat16) * 2, B, 8192 * 8192 * sizeof(aclFloat16), ACL_MEMCPY_HOST_TO_DEVICE));
         DACE_ACL_CHECK(aclrtSynchronizeDevice());
         std::cout << "Run kernel" << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
         __dace_runkernel_copy_map_outer_0_0_6(&__state, reinterpret_cast<uint8_t*>(ascend_A), reinterpret_cast<uint8_t*>(ascend_B), reinterpret_cast<uint8_t*>(ascend_C));
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<float> duration = end - start;
+        std::cout << "Kernel execution time: " << duration.count() * 1000.0f << " ms" << std::endl;
+
         DACE_ACL_CHECK(aclrtMemcpy(C, 8192 *  8192 * sizeof(aclFloat16) * 2, ascend_C, 8192 * 8192 * sizeof(aclFloat16), ACL_MEMCPY_DEVICE_TO_HOST));
         DACE_ACL_CHECK(aclrtSynchronizeDevice());
         // Check if B is full of 1s after the kernel run
@@ -123,4 +129,3 @@ extern "C"  int __dace_exit_ascendc_test_3(ascendc_test_3_state_t *__state)
     delete __state;
     return __err;
 }
-#endif
