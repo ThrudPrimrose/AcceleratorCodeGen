@@ -1,1 +1,0 @@
-#define __HASH_ascendc_test_1 "2e6c97f52bf535198226f46b2f4a003b7d0bb87a4c8ac79d896bcb0dc93f7131"
