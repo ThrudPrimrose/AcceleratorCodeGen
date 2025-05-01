@@ -9,14 +9,10 @@
 using namespace nvcuda;
 
 // Matrix dimensions
-constexpr int M = 8192;
-constexpr int N = M;
-constexpr int K = M;
+const std::vector<int> M_values = {16, 64, 4096, 8192};
 
 // Paths for the binary files
-std::string A_PATH = std::string("A_") + std::to_string(M) + std::string("_") + std::to_string(M) + std::string(".bin");
-std::string B_PATH = std::string("B_") + std::to_string(M) + std::string("_") + std::to_string(M) + std::string(".bin");
-std::string C_PATH = std::string("C_") + std::to_string(M) + std::string("_") + std::to_string(M) + std::string("_cuda_half_ref.bin");
+std::string A_PATH, B_PATH, C_PATH;
 
 // CUDA error check macro
 #define CHECK_CUDA(call) \
@@ -29,7 +25,7 @@ do { \
     } \
 } while(0)
 
-__global__ void matmul_tensor_cores(half* A, half* B, float* C, int lda, int ldb, int ldc) {
+__global__ void matmul_tensor_cores(half* A, half* B, float* C, int lda, int ldb, int ldc, int M, int N, int K) {
     wmma::fragment<wmma::matrix_a, 16, 16, 16, half, wmma::row_major> a_frag;
     wmma::fragment<wmma::matrix_b, 16, 16, 16, half, wmma::row_major> b_frag;
     wmma::fragment<wmma::accumulator, 16, 16, 16, float> c_frag;
@@ -90,73 +86,84 @@ void matmul_cublas_fp32(half* A, half* B, float* C, int m, int n, int k) {
     const float beta = 0.0f;
 
     // Call cublasGemmEx for tensor core-based matmul
-    cublasGemmEx(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k,
-                 &alpha,
-                 B, CUDA_R_16F, k,
-                 A, CUDA_R_16F, m,
-                 &beta,
-                 C, CUDA_R_32F, n,
-                 CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
+    cublasGemmEx(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k,
+                &alpha,
+                B, CUDA_R_16F, n,     // Leading dimension of B (number of rows in B)
+                A, CUDA_R_16F, k,     // Leading dimension of A (number of rows in A)
+                &beta,
+                C, CUDA_R_32F, n,     // Leading dimension of C (number of rows in C)
+                CUDA_R_32F, CUBLAS_GEMM_DEFAULT_TENSOR_OP);
 
     cublasDestroy(handle);
 }
 
 int main() {
-    // Allocate host memory for the matrices
-    std::vector<half> h_A(M * K);
-    std::vector<half> h_B(K * N);
-    std::vector<float> h_C_tensor_cores(M * N);
-    std::vector<float> h_C_cublas(M * N);
+    // Loop over different M values
+    for (int M : M_values) {
+        int N = M;
+        int K = M;
 
-    // Read the input matrices from binary files
-    read_binary(A_PATH.c_str(), h_A.data(), M * K * sizeof(half));
-    read_binary(B_PATH.c_str(), h_B.data(), K * N * sizeof(half));
+        // Update file paths for each M value
+        A_PATH = "A.bin";
+        B_PATH = "B.bin";
+        C_PATH = "C_" + std::to_string(M) + "_" + std::to_string(M) + "_cuda_half_ref.bin";
 
-    // Allocate device memory
-    half *d_A, *d_B;
-    float *d_C;
-    CHECK_CUDA(cudaMalloc(&d_A, M * K * sizeof(half)));
-    CHECK_CUDA(cudaMalloc(&d_B, K * N * sizeof(half)));
-    CHECK_CUDA(cudaMalloc(&d_C, M * N * sizeof(float)));
+        // Allocate host memory for the matrices
+        std::vector<half> h_A(M * K);
+        std::vector<half> h_B(K * N);
+        std::vector<float> h_C_tensor_cores(M * N);
+        std::vector<float> h_C_cublas(M * N);
 
-    // Copy matrices from host to device
-    CHECK_CUDA(cudaMemcpy(d_A, h_A.data(), M * K * sizeof(half), cudaMemcpyHostToDevice));
-    CHECK_CUDA(cudaMemcpy(d_B, h_B.data(), K * N * sizeof(half), cudaMemcpyHostToDevice));
-    CHECK_CUDA(cudaMemset(d_C, 0, M * N * sizeof(float)));
+        // Read the input matrices from binary files
+        read_binary(A_PATH.c_str(), h_A.data(), M * K * sizeof(half));
+        read_binary(B_PATH.c_str(), h_B.data(), K * N * sizeof(half));
 
-    // Launch custom kernel (Tensor Cores)
-    dim3 threads(32, 16);
-    dim3 blocks((N + 32 - 1) / 32, (M + 16 - 1) / 16);
-    matmul_tensor_cores<<<blocks, threads>>>(d_A, d_B, d_C, K, N, N);
-    CHECK_CUDA(cudaDeviceSynchronize());
+        // Allocate device memory
+        half *d_A, *d_B;
+        float *d_C;
+        CHECK_CUDA(cudaMalloc(&d_A, M * K * sizeof(half)));
+        CHECK_CUDA(cudaMalloc(&d_B, K * N * sizeof(half)));
+        CHECK_CUDA(cudaMalloc(&d_C, M * N * sizeof(float)));
 
-    // Copy result matrix back to host (Tensor Cores)
-    CHECK_CUDA(cudaMemcpy(h_C_tensor_cores.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
+        // Copy matrices from host to device
+        CHECK_CUDA(cudaMemcpy(d_A, h_A.data(), M * K * sizeof(half), cudaMemcpyHostToDevice));
+        CHECK_CUDA(cudaMemcpy(d_B, h_B.data(), K * N * sizeof(half), cudaMemcpyHostToDevice));
+        CHECK_CUDA(cudaMemset(d_C, 0, M * N * sizeof(float)));
 
-    // Run cuBLAS-based matrix multiplication
-    matmul_cublas_fp32(d_A, d_B, d_C, M, N, K);
+        // Launch custom kernel (Tensor Cores)
+        dim3 threads(32, 16);
+        dim3 blocks((N + 32 - 1) / 32, (M + 16 - 1) / 16);
+        matmul_tensor_cores<<<blocks, threads>>>(d_A, d_B, d_C, K, N, N, M, N, K);
+        CHECK_CUDA(cudaDeviceSynchronize());
 
-    // Copy cuBLAS result back to host
-    CHECK_CUDA(cudaMemcpy(h_C_cublas.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
+        // Copy result matrix back to host (Tensor Cores)
+        CHECK_CUDA(cudaMemcpy(h_C_tensor_cores.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
 
-    // Write the output matrix from tensor cores to a binary file
-    write_binary(C_PATH.c_str(), h_C_cublas.data(), M * N * sizeof(float));
+        // Run cuBLAS-based matrix multiplication
+        matmul_cublas_fp32(d_A, d_B, d_C, M, N, K);
 
-    // Free device memory
-    CHECK_CUDA(cudaFree(d_A));
-    CHECK_CUDA(cudaFree(d_B));
-    CHECK_CUDA(cudaFree(d_C));
+        // Copy cuBLAS result back to host
+        CHECK_CUDA(cudaMemcpy(h_C_cublas.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
 
-    // Numerical verification: compare the results of the two methods
-    float max_error = 0.0f;
-    for (int i = 0; i < M * N; ++i) {
-        float error = std::abs(h_C_tensor_cores[i] - h_C_cublas[i]);
-        if (error > max_error) {
-            max_error = error;
+        // Write the output matrix from tensor cores to a binary file
+        write_binary(C_PATH.c_str(), h_C_cublas.data(), M * N * sizeof(float));
+
+        // Free device memory
+        CHECK_CUDA(cudaFree(d_A));
+        CHECK_CUDA(cudaFree(d_B));
+        CHECK_CUDA(cudaFree(d_C));
+
+        // Numerical verification: compare the results of the two methods
+        float max_error = 0.0f;
+        for (int i = 0; i < M * N; ++i) {
+            float error = std::abs(h_C_tensor_cores[i] - h_C_cublas[i]);
+            if (error > max_error) {
+                max_error = error;
+            }
         }
-    }
 
-    std::cout << "Maximum error between Tensor Cores and cuBLAS: " << max_error << std::endl;
+        std::cout << "Maximum error between Tensor Cores and cuBLAS for M=" << M << ": " << max_error << std::endl;
+    }
 
     return 0;
 }
