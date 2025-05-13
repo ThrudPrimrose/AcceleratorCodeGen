@@ -4,7 +4,25 @@ import os
 import csv
 import numpy as np
 
-NUM_AI_CORES = 20
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--device",
+    choices=["ascend910", "ascend910B4"],
+    default="ascend910B4",
+    help="Target device type (ascend910 or ascend910B4). Default is ascend910B4."
+)
+args = parser.parse_args()
+
+# Set the DaCe config based on input
+dace.config.Config.set("compiler", "ascendc", "soc_version", value=args.device)
+
+if args.device == "ascend910":
+    NUM_AI_CORES = 32
+elif args.device == "ascend910B4":
+    NUM_AI_CORES = 20
+else:
+    raise ValueError("Invalid device type. Choose either 'ascend910' or 'ascend910B4'.")
+
 
 def vector_add(name, vector_size: int, frag_size: int):
     sdfg = dace.SDFG(name)
@@ -90,7 +108,7 @@ if os.path.exists(csv_path):
 
 def warmup():
     fsize = 32
-    vsize=fsize*1000*NUM_AI_CORES
+    vsize=fsize*1*NUM_AI_CORES
     sdfg = vector_add(name="warmup", vector_size=vsize, frag_size=fsize)
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
@@ -98,18 +116,21 @@ def warmup():
     B = np.full(vsize, 2, dtype=np.float16)  # Array B initialized to 2
     C = np.full(vsize, 0, dtype=np.float16)
     sdfg(A=A, B=B, C=C)
-    #if os.path.exists(cache_dir):
-    #    shutil.rmtree(cache_dir)
+    np.allclose(C, 3.0)
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
     del sdfg
+    del A
+    del B
+    del C
 warmup()
 
-exit()
 # Loop through the vector sizes (from 8192 * 1 to 8192 * 1024 in increments of 32)
 # Warm up
 j = 0
 
-for vector_multiplier in range(24, 33, 1):
-    vector_size = 2**vector_multiplier
+for vector_multiplier in range(24, 31, 1):
+    vector_size = NUM_AI_CORES*2**vector_multiplier
 
     A = np.full(vector_size, 1, dtype=np.float16)  # Array A initialized to 1
     B = np.full(vector_size, 2, dtype=np.float16)  # Array B initialized to 2
