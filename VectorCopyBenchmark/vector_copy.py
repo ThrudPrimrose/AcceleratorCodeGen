@@ -125,6 +125,7 @@ def warmup():
     del C
 warmup()
 
+exit()
 # Loop through the vector sizes (from 8192 * 1 to 8192 * 1024 in increments of 32)
 # Warm up
 j = 0
