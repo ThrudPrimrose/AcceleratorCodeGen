@@ -1,5 +1,16 @@
 import subprocess
 import os
+import re
+
+import argparse
+
+parser = argparse.ArgumentParser(description="Set device ID.")
+parser.add_argument("--dev_id", type=int, default=0, help="Device ID (default: 0)")
+
+args = parser.parse_args()
+
+dev_id = args.dev_id
+print(f"Using device ID: {dev_id}")
 
 # Define all possible commands, types, and options
 base_command = ["npu-smi", "info"]
@@ -26,18 +37,18 @@ def run_command(cmd):
 # Collect all outputs
 if not os.path.exists(output_log):
     with open(output_log, "w") as log_file:
-        for i in range(1): # Extend this by parsing -m
-            # Run commands for -t type
-            for t in types:
-                command = base_command + ["-i", str(i), "-t", t]
-                output = run_command(command)
-                log_file.write(f"Command: {' '.join(command)}\n{output}\n")
+        i = dev_id # Extend this by parsing -m
+        # Run commands for -t type
+        for t in types:
+            command = base_command + ["-i", str(i), "-t", t]
+            output = run_command(command)
+            log_file.write(f"Command: {' '.join(command)}\n{output}\n")
 
-            # Run commands for -m, -l, -h
-            for opt in options:
-                command = base_command + [opt]
-                output = run_command(command)
-                log_file.write(f"Command: {' '.join(command)}\n{output}\n")
+        # Run commands for -m, -l, -h
+        for opt in options:
+            command = base_command + [opt]
+            output = run_command(command)
+            log_file.write(f"Command: {' '.join(command)}\n{output}\n")
 
 print(f"Output collected in {output_log}")
 
@@ -68,17 +79,20 @@ def parse_device_info(file_path):
                 # Parse device information
                 parts = line.split()
                 if len(parts) >= 4:  # Ensure the line has enough columns
-                    device_id = int(parts[0])  # NPU ID
-                    device_name = parts[3] + " " + parts[4]     # Chip Name
-                    devices.append((device_id, device_name))
+                    try:
+                        device_id = int(parts[0])  # NPU ID
+                        device_name = parts[3] + " " + parts[4]     # Chip Name
+                        devices.append((device_id, device_name))
+                    except Exception as e:
+                        # print(f"Error parsing line: {line.strip()}. Error: {e}")
+                        continue
 
     return devices
 
 
-def parse_peak_flops(file_path, devices):
+def parse_peak_flops(file_path):
     cube_unit_flops = 16 * 16 * 16 * 2
     with open(file_path, "r") as log_file:
-        dev_id = devices[0][0]
         aicore_freq = None
         aicore_count = None
         in_region = False
@@ -108,13 +122,12 @@ def parse_peak_flops(file_path, devices):
     return dev_name[1], aicore_freq, aicore_count, aicore_freq * 1e6 * aicore_count * cube_unit_flops * 1e-12
 
 
-def parse_clock_speeds(file_path, devices):
+def parse_clock_speeds(file_path):
     ddr_clock_speed = None
     hbm_clock_speed = None
     in_region = False
 
     with open(file_path, "r") as log_file:
-        dev_id = devices[0][0]
         for line in log_file:
             # Identify the start of the relevant section
             if f"Command: npu-smi info -i {dev_id}" in line and "-t memory" in line:
@@ -141,21 +154,19 @@ def parse_clock_speeds(file_path, devices):
     return ddr_clock_speed, hbm_clock_speed
 
 devices = parse_device_info(output_log)
-dev_name, aicore_freq, aicore_count, peak_tflops = parse_peak_flops(output_log, devices)
-ddr_clock_speed, hbm_clock_speed = parse_clock_speeds(output_log, devices)
+dev_name, aicore_freq, aicore_count, peak_tflops = parse_peak_flops(output_log)
+ddr_clock_speed, hbm_clock_speed = parse_clock_speeds(output_log)
 
-theo = 1228.0
+dev_names = set([b for (a, b) in devices if a == dev_id])
+assert len(dev_names) == 1, f"Device ID {dev_id} not found in the log file." if len(dev_names) == 0 else f"Multiple devices found for ID {dev_id}: {dev_names}"
+dev_name = dev_names.pop()
+
+theo = 1228.0 if "910A" in dev_name else 800.0
+
 vadd_size = 2048 / 8
 print(f"HBM Clock speed: {hbm_clock_speed * 1e6 * 1e-9} Hz")
 print(f"Theorethical Peak Bandwidth from Huawei: {theo} GB/s")
 print(f"Memory BusWidth = {theo / (hbm_clock_speed * 1e6 * 1e-9)} Bytes?")
-
-# 3 16x16 tiles, half (2 byzes)
-# cube_input_size = 16 * 16 * 2 * 2
-# print(f"Using Vector Unit: {hbm_clock_speed * 1e6 * 1e-9 * aicore_count * vadd_size} GB/s?")
-# print(f"Using Cube Unit: {hbm_clock_speed * 1e6 * 1e-9 * aicore_count * cube_input_size} GB/s?")
-
-import re
 
 command = "lspci -vv | grep -i memory"
 result = subprocess.run(command, shell=True, capture_output=True, text=True)
