@@ -4,6 +4,8 @@ import os
 import csv
 import numpy as np
 
+NUM_AI_CORES = 20
+
 def vector_add(name, vector_size: int, frag_size: int):
     sdfg = dace.SDFG(name)
     wstate = sdfg.add_state("warmup")
@@ -30,8 +32,8 @@ def vector_add(name, vector_size: int, frag_size: int):
         frag_c = sdfg.add_array(f"frag{i}_C", (frag_size, ), dace.float16, dace.dtypes.StorageType.Ascend_VECOUT, transient=True)
 
 
-        dev_entry, dev_exit = state.add_map(name="copy_map_outer", ndrange={"i": dace.subsets.Range([(0, vector_size-1, frag_size*32)])}, schedule=dace.dtypes.ScheduleType.Ascend_Device)
-        tblock_entry, tblock_exit = state.add_map(name="copy_map_inner", ndrange={"ii": dace.subsets.Range([(0, frag_size*32-1, frag_size)])}, schedule=dace.dtypes.ScheduleType.Ascend_AiCoreGroup)
+        dev_entry, dev_exit = state.add_map(name="copy_map_outer", ndrange={"i": dace.subsets.Range([(0, vector_size-1, frag_size*NUM_AI_CORES)])}, schedule=dace.dtypes.ScheduleType.Ascend_Device)
+        tblock_entry, tblock_exit = state.add_map(name="copy_map_inner", ndrange={"ii": dace.subsets.Range([(0, frag_size*NUM_AI_CORES-1, frag_size)])}, schedule=dace.dtypes.ScheduleType.Ascend_AiCoreGroup)
         if state == mstate:
             dev_entry.instrument = dace.InstrumentationType.Timer
 
@@ -87,18 +89,21 @@ if os.path.exists(csv_path):
             existing_measurements.add((vector_size, frag_size))
 
 def warmup():
-    sdfg = vector_add(name="warmup", vector_size=8192, frag_size=32)
+    fsize = 32
+    vsize=fsize*1000*NUM_AI_CORES
+    sdfg = vector_add(name="warmup", vector_size=vsize, frag_size=fsize)
     if os.path.exists(cache_dir):
         shutil.rmtree(cache_dir)
-    A = np.full(8192, 1, dtype=np.float16)  # Array A initialized to 1
-    B = np.full(8192, 2, dtype=np.float16)  # Array B initialized to 2
-    C = np.full(8192, 0, dtype=np.float16)
+    A = np.full(vsize, 1, dtype=np.float16)  # Array A initialized to 1
+    B = np.full(vsize, 2, dtype=np.float16)  # Array B initialized to 2
+    C = np.full(vsize, 0, dtype=np.float16)
     sdfg(A=A, B=B, C=C)
-    if os.path.exists(cache_dir):
-        shutil.rmtree(cache_dir)
+    #if os.path.exists(cache_dir):
+    #    shutil.rmtree(cache_dir)
     del sdfg
 warmup()
 
+exit()
 # Loop through the vector sizes (from 8192 * 1 to 8192 * 1024 in increments of 32)
 # Warm up
 j = 0
@@ -119,7 +124,7 @@ for vector_multiplier in range(24, 33, 1):
         if (vector_size, frag_size) in existing_measurements:
             print(f"Skipping vector_size={vector_size}, frag_size={frag_size} (already measured)")
             continue
-        if frag_size*32 > vector_size:
+        if frag_size*NUM_AI_CORES > vector_size:
             print(f"Skipping vector_size={vector_size}, frag_size={frag_size} (vector not long enough)")
             continue
         if vector_size % frag_size*3 != 0:
