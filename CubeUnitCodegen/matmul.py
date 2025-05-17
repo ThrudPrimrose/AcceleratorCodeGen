@@ -25,7 +25,7 @@ def gemm(A: dace.float32[M, K] @ dace.dtypes.StorageType.Ascend_Global,
          B: dace.float32[K, N] @ dace.dtypes.StorageType.Ascend_Global,
          C: dace.float32[M, N] @ dace.dtypes.StorageType.Ascend_Global):
     for i, j in dace.map[0:M, 0:N] @ dace.dtypes.ScheduleType.Ascend_Device:
-        tmp = 0
+        tmp = 0.0
         for k in dace.map[0:K] @ dace.dtypes.ScheduleType.Sequential:
             tmp = tmp + A[i, k] * B[k, j]
         C[i, j] = C[i, j] + tmp
@@ -33,6 +33,9 @@ def gemm(A: dace.float32[M, K] @ dace.dtypes.StorageType.Ascend_Global,
 
 sdfg = gemm.to_sdfg()
 sdfg.simplify()
+for arr_name, arr in sdfg.arrays.items():
+    if arr.dtype == dace.float32 or arr.dtype == dace.float64:
+        arr.dtype = dace.float16
 sdfg.save("gemm_base1.sdfg")
 
 def prepropcess(sdfg: dace.SDFG):
@@ -74,7 +77,7 @@ for s in sdfg.states():
                 verify=False,
                 map_entry=n,
                 options={
-                    "compute_element_group_dims": [8, 8, 1],
+                    "compute_element_group_dims": [5, 4, 1],
                     "map_schedule": dace.dtypes.ScheduleType.Ascend_Device,
                     "schedule_to_add": dace.dtypes.ScheduleType.Ascend_AiCoreGroup,
                 },
@@ -234,7 +237,8 @@ for s in sdfg.states():
                     "dst_memory_location": dace.dtypes.StorageType.Ascend_L1,
                     "src_memory_location": dace.dtypes.StorageType.Ascend_Global,
                     "use_lib_node": False,
-                    "pad_contig_dim": True,
+                    "pad_contig_dim": False,
+
                     "location_prefixes": {
                         dace.dtypes.StorageType.Ascend_L2: "L2",
                         dace.dtypes.StorageType.Ascend_L1: "L1",
@@ -279,7 +283,7 @@ for s in sdfg.states():
                     "dst_memory_location": dace.dtypes.StorageType.Ascend_L2,
                     "src_memory_location": dace.dtypes.StorageType.Ascend_L1,
                     "use_lib_node": False,
-                    "pad_contig_dim": True,
+                    "pad_contig_dim": False,
                     "location_prefixes": {
                         dace.dtypes.StorageType.Ascend_L2: "L2",
                         dace.dtypes.StorageType.Ascend_L1: "L1",
@@ -326,13 +330,13 @@ finf = float('inf')
 
 # Memory locations, and possible paths for Ascend
 graph = {
-    glb: { glb: 0, a2: 1, b2: 1, a1 : finf, b1: finf, co2 : finf, co1: finf, vecin: 1, vecout: finf },
+    glb: { glb: 0, a2: 1, b2: 1, a1 : finf, b1: finf, co2 : finf, co1: 1, vecin: 1, vecout: finf },
     a2: { glb: finf, a2: 0, b2: finf, a1 : 1, b1: finf, co2 : finf, co1: finf, vecin: finf, vecout: finf },
     b2: { glb: finf, a2: finf, b2: 0, a1 : finf, b1: 1, co2 : finf, co1: finf, vecin: finf, vecout: finf },
     a1: { glb: finf, a2: finf, b2: finf, a1 : 0, b1: finf, co2 : 1, co1: finf, vecin: finf, vecout: finf },
     b1: { glb: finf, a2: finf, b2: finf, a1 : finf, b1: 0, co2 : 1, co1: finf, vecin: finf, vecout: finf} ,
-    co2: { glb: finf, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : 0, co1: 1, vecin: finf, vecout: finf },
-    co1: { glb: 1, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : finf, co1: 0, vecin: 1, vecout: finf },
+    co2: { glb: 1, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : 0, co1: finf, vecin: 1, vecout: finf },
+    co1: { glb: finf, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : 1, co1: 0, vecin: finf, vecout: finf },
     vecin: { glb: finf, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : finf, co1: finf, vecin: finf, vecout: 1 },
     vecout: { glb: 1, a2: finf, b2: finf, a1 : finf, b1: finf, co2 : finf, co1: finf, vecin: finf, vecout: finf }
 }
@@ -343,18 +347,18 @@ entry_location_requirements = {
 }
 
 exit_location_requirements = {
-    "MMU": [co2,],
+    "MMU": [co1,],
     "VECTOR": [vecout,],
 }
 
 computational_unit_register_locations =  {
-    "MMU": co2,
+    "MMU": co1,
     "VECTOR": vecin,
 }
 
 in_out_types = {
     vecin: vecout,
-    a2 + "_AND_" + b2: co2
+    a2 + "_AND_" + b2: co1
 }
 
 l1 = str(dace.dtypes.StorageType.Ascend_L1)
@@ -378,7 +382,6 @@ InsertTransfers(movement_graph=serialized_G,
     sdfg=sdfg,
     pipeline_results={},
 )
-
 
 sdfg.save("gemm_insert_transfers.sdfg")
 
