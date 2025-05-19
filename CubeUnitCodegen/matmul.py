@@ -17,6 +17,26 @@ N = dace.symbol("N")
 M = dace.symbol("M")
 K = dace.symbol("K")
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--device",
+    choices=["ascend910", "ascend910B4"],
+    default="ascend910B4",
+    help="Target device type (ascend910 or ascend910B4). Default is ascend910B4."
+)
+args = parser.parse_args()
+
+# Set the DaCe config based on input
+dace.config.Config.set("compiler", "ascendc", "soc_version", value=args.device)
+
+if args.device == "ascend910":
+    NUM_AI_CORES = 32
+elif args.device == "ascend910B4":
+    NUM_AI_CORES = 20
+else:
+    raise ValueError("Invalid device type. Choose either 'ascend910' or 'ascend910B4'.")
 
 
 
