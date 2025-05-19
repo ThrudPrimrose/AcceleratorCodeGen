@@ -1,8 +1,5 @@
 import dace
-import dace.transformation
-from dace.transformation.auto_tile.auto_apply import find_node_by_cond
 from dace.transformation.auto_tile.insert_transfers import InsertTransfers
-from dace.transformation.auto_tile.remainder_loop import RemainderLoop
 from dace.transformation.auto_tile.replace_scalar_to_vector_unit import ReplaceScalarToVectorUnit
 from dace.transformation.auto_tile.thread_coarsening import ThreadCoarsening
 from dace.transformation.auto_tile.explicit_memory_move import ExplicitMemoryMove
@@ -10,8 +7,8 @@ from dace.transformation.auto_tile.add_compute_element_map import AddComputeElem
 from dace.transformation.auto_tile.block_tiling import BlockTiling
 from dace.transformation.auto_tile.consecutive_block_tiling import ConsecutiveBlockTiling
 import json
-import numpy
-from dace.sdfg import utils as sdutil, SDFG, SDFGState, ScopeSubgraphView
+import numpy as np
+from dace.sdfg import utils as sdutil
 
 N = dace.symbol("N")
 M = dace.symbol("M")
@@ -449,4 +446,17 @@ sdfg.save("gemm_remainder_loop.sdfg")
 """
 
 sdfg.generate_code()
-sdfg.compile()
+csdfg = sdfg.compile()
+
+iM = 5*32
+iN = 4*32
+iK = 32
+A = np.random.rand(iM, iK).astype(np.float16)
+B = np.random.rand(iK, iN).astype(np.float16)
+C = np.zeros((iM, iN), dtype=np.float16)
+C_ref = A @ B
+print(C_ref)
+csdfg(A=A, B=B, C=C, M=iM, N=iN, K=iK)
+print(C)
+C_diff = np.abs(C - C_ref)
+print(C_diff)
