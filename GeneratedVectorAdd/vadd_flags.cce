@@ -1,0 +1,97 @@
+
+#include "common.h"
+
+#include "kernel_operator.h"
+
+namespace dace
+{
+    using float16 = half;
+}
+
+struct ascendc_test_3_state_t
+{
+    dace::ascendc::Context *acl_context;
+};
+
+extern "C" __global__ __aicore__ void copy_map_outer_0_0_6(GM_ADDR ascend_A, GM_ADDR ascend_B, GM_ADDR ascend_C) {
+    AscendC::SetAtomicNone();
+    AscendC::SetMaskNorm();
+    AscendC::SetVectorMask<half, AscendC::MaskMode::NORMAL>((uint64_t)-1, (uint64_t)-1);
+
+    AscendC::GlobalTensor<half> a_gm;
+    AscendC::GlobalTensor<half> b_gm;
+    AscendC::GlobalTensor<half> c_gm;
+    AscendC::TPipe pipe;
+
+    VecBuf_t tbuf_a;
+    pipe.InitBuffer(tbuf_a, sizeof(half) * batch_size);
+    VecBuf_t tbuf_b;
+    pipe.InitBuffer(tbuf_b, sizeof(half) * batch_size);
+    VecBuf_t tbuf_c;
+    pipe.InitBuffer(tbuf_c, sizeof(half) * batch_size);
+
+    for (int32_t i = 0; i < vector_size; i += batch_size * num_cores){
+        int32_t offset_this_core = i + batch_size * AscendC::GetBlockIdx();
+        a_gm.SetGlobalBuffer((__gm__ half *)a + offset_this_core);
+        b_gm.SetGlobalBuffer((__gm__ half *)b + offset_this_core);
+        c_gm.SetGlobalBuffer((__gm__ half *)c + offset_this_core);
+
+        AscendC::LocalTensor<half> local_buf_a = tbuf_a.Get<half>();
+        AscendC::LocalTensor<half> local_buf_b = tbuf_b.Get<half>();
+        AscendC::LocalTensor<half> local_buf_c = tbuf_c.Get<half>();
+
+        int32_t elements_per_tile = batch_size;
+
+        // Config for vector operation
+        // See AscendC doc about repeatTimes、dataBlockStride、repeatStride
+        // https://www.hiascend.com/document/detail/zh/canncommercial/800/developmentguide/opdevg/Ascendcopdevg/atlas_ascendc_10_0022.html
+        uint32_t vec_repeat = DIV_ROUNDUP(elements_per_tile, num_per_vector);  // must be smaller than 255
+        auto unary_params = AscendC::UnaryRepeatParams(1, 1, 8, 8);
+        auto binary_params = AscendC::BinaryRepeatParams(1, 1, 1, 8, 8, 8);
+
+        // Config for copy operation
+        // See AscendC doc about DataCopyParams
+        // https://www.hiascend.com/document/detail/zh/canncommercial/800/apiref/ascendcopapi/atlasascendc_api_07_0102.html
+        uint16_t copy_block_len = DIV_ROUNDUP(sizeof(half) * batch_size, ub_block_size);
+        auto copy_params = AscendC::DataCopyParams(1, copy_block_len, 0, 0);
+
+        int32_t x_offset = 0;
+        int32_t y_offset = 0;
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(event_id);
+        AscendC::DataCopy(a_buf, a_gm[x_offset], copy_params);
+        a_offset += num_to_process;
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(event_id);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(event_id);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(event_id);
+        AscendC::DataCopy(b_buf, b_gm[x_offset], copy_params);
+        b_offset += num_to_process;
+        AscendC::SetFlag<AscendC::HardEvent::MTE2_V>(event_id);
+        AscendC::WaitFlag<AscendC::HardEvent::MTE2_V>(event_id);
+
+        AscendC::Adds<half, false>(
+            c_buf, a_buf, b_buf, vec_repeat, unary_params
+        );
+
+        AscendC::SetFlag<AscendC::HardEvent::V_MTE3>(event_id);
+        AscendC::WaitFlag<AscendC::HardEvent::V_MTE3>(event_id);
+        AscendC::DataCopy(c_gm[y_offset], c_buf, copy_params);
+        AscendC::SetFlag<AscendC::HardEvent::MTE3_MTE2>(event_id);
+
+        y_offset += num_to_process;
+        }
+    }
+
+    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID0);
+    AscendC::WaitFlag<AscendC::HardEvent::MTE3_MTE2>(EVENT_ID1);
+    AscendC::PipeBarrier<PIPE_ALL>();
+}
+
+
+extern "C" void __dace_run_runkernel_copy_map_outer_0_0_6(ascendc_test_3_state_t *__state, uint8_t* ascend_A, uint8_t* ascend_B, uint8_t* ascend_C)
+{
+
+    copy_map_outer_0_0_6<<<32, nullptr, nullptr>>>(reinterpret_cast<GM_ADDR>(ascend_A), reinterpret_cast<GM_ADDR>(ascend_B), reinterpret_cast<GM_ADDR>(ascend_C));
+
+    DACE_ACL_CHECK(aclrtSynchronizeDevice());
+
+}
