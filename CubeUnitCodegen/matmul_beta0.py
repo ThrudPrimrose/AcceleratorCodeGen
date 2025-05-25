@@ -228,7 +228,7 @@ for s in sdfg.states():
                 thread_block_map_entry=n,
                 work_map_entry=work_map,
                 options={
-                    "block_tile_sizes": (128,),
+                    "block_tile_sizes": (32,),
                 },)
             )
             sdfg.validate()
@@ -238,7 +238,7 @@ for s in sdfg.states():
                 thread_block_map_entry=n,
                 work_map_entry=work_map,
                 options={
-                    "block_tile_sizes": (128,),
+                    "block_tile_sizes": (32,),
                 },
             )
             sdfg.validate()
@@ -263,7 +263,7 @@ for s in sdfg.states():
                 block_tiled_map_entry=n,
                 options={
                     "level": 1,
-                    "block_tile_factor": (4,),
+                    "block_tile_factor": (1,),
                 },)
             )
             sdfg.validate()
@@ -273,7 +273,7 @@ for s in sdfg.states():
                 block_tiled_map_entry=n,
                 options={
                     "level": 1,
-                    "block_tile_factor": (4,),
+                    "block_tile_factor": (1,),
                 },
             )
             sdfg.validate()
