@@ -159,7 +159,7 @@ for s in sdfg.states():
                 verify=False,
                 map_entry=n,
                 options={
-                    "compute_element_group_dims": [5, 4, 1],
+                    "compute_element_group_dims": [5, 4, 1] if args.device == "ascend910B4" else [8, 4, 1],
                     "map_schedule": dace.dtypes.ScheduleType.Ascend_Device,
                     "schedule_to_add": dace.dtypes.ScheduleType.Ascend_AiCoreGroup,
                 },
