@@ -344,7 +344,7 @@ for s in sdfg.states():
                         str(dace.dtypes.StorageType.Ascend_L2) + "@" + str(dace.dtypes.StorageType.Ascend_A1): dace.dtypes.StorageType.Ascend_A1,
                         str(dace.dtypes.StorageType.Ascend_L2) + "@" + str(dace.dtypes.StorageType.Ascend_B1): dace.dtypes.StorageType.Ascend_B1,
                         str(dace.dtypes.StorageType.Ascend_L2) + "@" + str(dace.dtypes.StorageType.Ascend_CO2): dace.dtypes.StorageType.Ascend_CO2,
-                        str(dace.dtypes.StorageType.Ascend_L2) + "@" + str(dace.dtypes.StorageType.Ascend_CO1): dace.dtypes.StorageType.Ascend_CO1,
+                        str(dace.dtypes.StorageType.Ascend_L1) + "@" + str(dace.dtypes.StorageType.Ascend_CO1): dace.dtypes.StorageType.Ascend_CO1,
                     },
                     "prepend_purpose_to_name": True,
                     "level": 1,
