@@ -24,6 +24,50 @@ def vadd_dace(A: dace.float32[N], B: dace.float32[N], C: dace.float32[N]):
 vadd_sdfg = vadd_dace.to_sdfg()
 
 
+class SoftHierConfig:
+    """Configuration class for SoftHier parameters"""
+    def __init__(self):
+        self.hbm_node_addr_space = 0x20000000
+        self.hbm_node_addr_base = 0xc0000000
+        self.thread_group_dims = (4, 4)
+        self.hbm_placement = "4,0,0,4"
+        self.hbm_node_per_ctrl = 1
+        self.total_tcdm_size = 0x08000000
+        self.redmule_h = 64
+        self.redmule_w = 32
+        self.redmule_ce_pipe = 1
+        
+        # Data types
+        self.dace_data_type_input = dace.uint16
+        self.dace_data_type_output = dace.uint16
+        self.numpy_data_type_input = np.uint16
+        self.numpy_data_type_output = np.uint16
+        
+        # Paths
+        self.gvsoc_path = "/home/primrose/Work/SoftHier/gvsoc"
+        self.ccache_path = "/usr/bin"
+        self.python_script_path = os.path.dirname(os.path.realpath(__file__))
+        self.temp_run_dir = str(os.environ.get("SOFTHIER_TEMP_RUN_PATH", self.python_script_path))
+        
+        # Derived properties
+        self.dim_x = self.thread_group_dims[0]
+        self.dim_y = self.thread_group_dims[1]
+        self.tcdm_size = self.total_tcdm_size // (self.dim_x * self.dim_y)
+        self.elem_size_input = self.numpy_data_type_input().itemsize
+        self.elem_size_output = self.numpy_data_type_output().itemsize
+        
+        self._setup_environment()
+    
+    def _setup_environment(self):
+        """Setup environment variables"""
+        os.environ["GVSOC_INSTALL_PATH"] = self.gvsoc_path
+        os.environ["GVSOC_DIR"] = self.gvsoc_path
+        os.environ["SOFTHIER_INSTALL_PATH"] = f"{self.gvsoc_path}/soft_hier/flex_cluster_sdk/runtime/"
+        os.environ["CCACHE_DIR"] = f"/home/primrose/.ccache"
+        os.environ["PATH"] = f"{self.gvsoc_path}/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin:{os.environ['PATH']}"
+        os.environ["SHCC"] = f"{self.gvsoc_path}/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin/riscv32-unknown-elf-gcc"
+
+
 ########################################################################
 # Worker function: Runs ONE parameter combination in a temp directory
 ########################################################################

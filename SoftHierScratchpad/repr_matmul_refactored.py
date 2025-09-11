@@ -20,8 +20,13 @@ def setup_environment():
     """Setup paths and environment"""
     os.environ["GVSOC_INSTALL_PATH"] = GVSOC_PATH
     os.environ["GVSOC_DIR"] = GVSOC_PATH
-    os.environ["PATH"] = f"{GVSOC_PATH}/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin:{os.environ['PATH']}"
-    os.environ["SHCC"] = f"{GVSOC_PATH}/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin/riscv32-unknown-elf-gcc"
+    os.environ["GVSOC_PATH"] = GVSOC_PATH
+    os.environ["PATH"] = f"{GVSOC_PATH}/third_party/toolchain/install/bin:{os.environ['PATH']}"
+    os.environ["SHCC"] = f"{GVSOC_PATH}/third_party/toolchain/install/bin/riscv32-unknown-elf-gcc"
+    os.environ["CPLUS_INCLUDE_PATH"] = f"/home/primrose/Work/SoftHier/softhierdace/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('CPLUS_INCLUDE_PATH', '')}"
+    os.environ["C_INCLUDE_PATH"] = f"/home/primrose/Work/SoftHier/softhierdace/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('C_INCLUDE_PATH','')}"
+    os.environ["SOFTHIER_INSTALL_PATH"] = f"{GVSOC_PATH}/soft_hier/flex_cluster_sdk/runtime/"
+    os.environ["CCACHE_DIR"] = f"/home/primrose/.ccache"
 
 def setup_architecture():
     """Generate and compile architecture"""

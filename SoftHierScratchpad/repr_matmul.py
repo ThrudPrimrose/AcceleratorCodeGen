@@ -198,10 +198,12 @@ elem_size_input = numpy_data_type_input().itemsize
 elem_size_output = numpy_data_type_output().itemsize
 os.environ["GVSOC_INSTALL_PATH"] = gvsoc_path
 os.environ["GVSOC_DIR"] = gvsoc_path
+os.environ["GVSOC_PATH"] = gvsoc_path
 os.environ["SOFTHIER_INSTALL_PATH"] = f"{gvsoc_path}/soft_hier/flex_cluster_sdk/runtime/"
 os.environ["CCACHE_DIR"] = f"/home/primrose/.ccache"
-os.environ["PATH"] = f"/home/primrose/Work/SoftHier/gvsoc/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin:{os.environ["PATH"]}"
-os.environ["SHCC"] = f"/home/primrose/Work/SoftHier/gvsoc/third_party/toolchain/v1.0.16-pulp-riscv-gcc-centos-7/bin/riscv32-unknown-elf-gcc"
+os.environ["PATH"] = f"/home/primrose/Work/SoftHier/gvsoc/third_party/toolchain/install/bin:{os.environ["PATH"]}"
+os.environ["SHCC"] = f"/home/primrose/Work/SoftHier/gvsoc/third_party/toolchain/install/bin/riscv32-unknown-elf-gcc"
+
 
 print(os.environ["SHCC"])
 print(os.environ["PATH"])
