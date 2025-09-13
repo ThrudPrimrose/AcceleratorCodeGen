@@ -9,10 +9,10 @@ from dace.soft_hier import _my_gen_baseline_matmul_sdfg
 
 # Configuration
 GVSOC_PATH = "/home/primrose/Work/SoftHier/gvsoc"
-THREAD_GROUP_DIMS = (4, 4)
+THREAD_GROUP_DIMS = (2, 2)
 HBM_ADDR_BASE = 0xc0000000
 HBM_ADDR_SPACE = 0x20000000
-TCDM_SIZE = 0x08000000 // 16  # Total / (4x4)
+TCDM_SIZE = 0x04000000 // 4  # Total / (2x2)
 DTYPE_INPUT = np.uint16
 DTYPE_OUTPUT = np.uint16
 
@@ -31,7 +31,7 @@ def setup_environment():
 def setup_architecture():
     """Generate and compile architecture"""
     generate_arg_cfg(
-        cluster_tcdm_size=hex(TCDM_SIZE*2),
+        cluster_tcdm_size=hex(TCDM_SIZE*4),
         num_cluster_x=4, num_cluster_y=4,
         redmule_ce_height=64, redmule_ce_width=32, redmule_ce_pipe=1,
         hbm_start_base=hex(HBM_ADDR_BASE),
@@ -73,6 +73,13 @@ def step1_np_to_hbm(handlers):
         KMN=[A_handler.array.shape[1], A_handler.array.shape[0], B_handler.array.shape[1]],
         hbm_node_addr_base=HBM_ADDR_BASE, hbm_node_addr_space=HBM_ADDR_SPACE
     )
+    print("A_handler")
+    A_handler.print_info()
+    print("B_handler")
+    B_handler.print_info()
+    print("C_handler")
+    C_handler.print_info()
+    raise Exception("HALT")
 
 def step2_run_softhier(A, B, C, M, N, K, hwM, hwN, hwK, handlers):
     """Step 2: Run SoftHier kernel"""
