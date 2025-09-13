@@ -146,7 +146,8 @@ def np_to_hbm(A_handler, M, N, K):
     make_preload_elf_hbm_interleaved_new(
         "output.elf", [A_handler], 
         KMN=[K, M, N],
-        hbm_node_addr_base=HBM_ADDR_BASE, hbm_node_addr_space=HBM_ADDR_SPACE
+        hbm_node_addr_base=HBM_ADDR_BASE, hbm_node_addr_space=HBM_ADDR_SPACE,
+        args_only=False
     )
     A_handler.print_info()
 
@@ -232,7 +233,7 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
 
     A_handler = InterleaveHandler(array=A_host, block_shape=(hwM, hwK), cluster_dims=thread_group_dims)
     A_handler.split_horizental()
-    A_handler.place_to_range(place_range=(dim_x+2*dim_y, 2*dim_x+2*dim_y-1, 1))
+    A_handler.place_to_range(place_range=(0, 7, 1))
     split_A = A_handler.split_scheme
     place_A = A_handler.placement_scheme
 
@@ -244,7 +245,7 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
 
     C_handler = InterleaveHandler(array=C_host, block_shape=(hwM, hwN), cluster_dims=thread_group_dims)
     C_handler.split_to_blocks()
-    C_handler.place_to_range(place_range=(0, dim_y - 1, 1))
+    C_handler.place_to_range(place_range=(0, 7, 1))
     split_C = C_handler.split_scheme
     place_C = C_handler.placement_scheme
 
@@ -253,7 +254,8 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
         [A_handler, B_handler, C_handler],
         KMN=[K_val, M_val, N_val],
         hbm_node_addr_base=HBM_ADDR_BASE,
-        hbm_node_addr_space=HBM_ADDR_SPACE
+        hbm_node_addr_space=HBM_ADDR_SPACE,
+        args_only=False
     )
 
     M = M_val
