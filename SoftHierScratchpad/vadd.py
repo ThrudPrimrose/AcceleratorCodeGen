@@ -144,7 +144,7 @@ def create_test_data(M, N, K, hwM, hwN, hwK):
 def np_to_hbm(A_handler, M, N, K):
     """Step 1: Move NumPy to HBM"""
     make_preload_elf_hbm_interleaved_new(
-        "output.elf", [A_handler], 
+        "./output.elf", [A_handler], 
         KMN=[K, M, N],
         hbm_node_addr_base=HBM_ADDR_BASE, hbm_node_addr_space=HBM_ADDR_SPACE,
         args_only=False
@@ -244,18 +244,18 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
     place_B = B_handler.placement_scheme
 
     C_handler = InterleaveHandler(array=C_host, block_shape=(hwM, hwN), cluster_dims=thread_group_dims)
-    C_handler.split_to_blocks()
+    C_handler.split_vertical()
     C_handler.place_to_range(place_range=(0, 7, 1))
     split_C = C_handler.split_scheme
     place_C = C_handler.placement_scheme
 
     make_preload_elf_hbm_interleaved_new(
-        "output.elf",
+        "./output.elf",
         [A_handler, B_handler, C_handler],
         KMN=[K_val, M_val, N_val],
         hbm_node_addr_base=HBM_ADDR_BASE,
         hbm_node_addr_space=HBM_ADDR_SPACE,
-        args_only=False
+        args_only=True
     )
 
     M = M_val
@@ -338,7 +338,7 @@ if __name__ == "__main__":
     M, N, K, hwM, hwN, hwK = 512, 512, 512, THREAD_GROUP_DIMS[0], THREAD_GROUP_DIMS[1], 128
     A, A_handler = create_test_data(M, N, K, hwM, hwN, hwK)
     assert isinstance(A, np.ndarray)
-    np_to_hbm(A_handler, M, N, K)
+    #np_to_hbm(A_handler, M, N, K)
 
     combo = (512,512,512,64,64,128, (2,2), (4096))
     run_sdfg_in_tempdir(combo, A, A_handler)
