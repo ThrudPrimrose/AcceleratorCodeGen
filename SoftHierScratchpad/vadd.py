@@ -12,7 +12,8 @@ import ctypes
 from dace.soft_hier.utils.generate_sdfg import _my_gen_baseline_matmul_sdfg
 
 # Configuration
-GVSOC_PATH = "/home/primrose/Work/SoftHier/gvsoc"
+GVSOC_PATH = os.environ.get("GVSOC_PATH", "/home/primrose/Work/SoftHier/gvsoc")
+DACE_PATH = os.environ.get("DACE_PATH", "/home/primrose/Work/SoftHier/softhierdace")
 THREAD_GROUP_DIMS = (2, 2)
 HBM_ADDR_BASE = 0xc0000000
 HBM_ADDR_SPACE = 0x20000000
@@ -30,10 +31,9 @@ def setup_environment():
     os.environ["GVSOC_PATH"] = GVSOC_PATH
     os.environ["PATH"] = f"{GVSOC_PATH}/third_party/toolchain/install/bin:{os.environ['PATH']}"
     os.environ["SHCC"] = f"{GVSOC_PATH}/third_party/toolchain/install/bin/riscv32-unknown-elf-gcc"
-    os.environ["CPLUS_INCLUDE_PATH"] = f"/home/primrose/Work/SoftHier/softhierdace/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('CPLUS_INCLUDE_PATH', '')}"
-    os.environ["C_INCLUDE_PATH"] = f"/home/primrose/Work/SoftHier/softhierdace/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('C_INCLUDE_PATH','')}"
+    os.environ["CPLUS_INCLUDE_PATH"] = f"{DACE_PATH}/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('CPLUS_INCLUDE_PATH', '')}"
+    os.environ["C_INCLUDE_PATH"] = f"{DACE_PATH}/dace/runtime/include/dace/soft_hier/runtime/include:{os.environ.get('C_INCLUDE_PATH','')}"
     os.environ["SOFTHIER_INSTALL_PATH"] = f"{GVSOC_PATH}/soft_hier/flex_cluster_sdk/runtime/"
-    os.environ["CCACHE_DIR"] = f"/home/primrose/.ccache"
 
 def setup_architecture():
     """Generate and compile architecture"""
@@ -227,8 +227,8 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
     execution_period_ns = None
 
     tmp_dir = "."
-    A_host = np.ones((M_val, K_val), dtype=DTYPE_INPUT)
-    B_host = np.ones((K_val, N_val), dtype=DTYPE_INPUT)
+    A_host = np.fromfunction(lambda i, j: i + j, (M_val, K_val), dtype=DTYPE_INPUT)
+    B_host = np.fromfunction(lambda i, j: 2*i + 2*j, (K_val, N_val), dtype=DTYPE_INPUT)
     C_host = np.ones((M_val, N_val), dtype=DTYPE_OUTPUT)
 
     A_handler = InterleaveHandler(array=A_host, block_shape=(hwM, hwK), cluster_dims=thread_group_dims)
