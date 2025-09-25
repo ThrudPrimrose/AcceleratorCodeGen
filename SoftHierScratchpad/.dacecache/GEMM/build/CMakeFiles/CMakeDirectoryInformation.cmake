@@ -3,7 +3,7 @@
 
 # Relative path conversion top directories.
 set(CMAKE_RELATIVE_PATH_TOP_SOURCE "/home/primrose/Work/SoftHier/softhierdace/dace/codegen")
-set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/primrose/Work/SoftHier/Scratchpad/.dacecache/GEMM/build")
+set(CMAKE_RELATIVE_PATH_TOP_BINARY "/home/primrose/Work/SoftHier/AcceleratorCodeGen/SoftHierScratchpad/.dacecache/GEMM/build")
 
 # Force unix paths in dependencies.
 set(CMAKE_FORCE_UNIX_PATHS 1)

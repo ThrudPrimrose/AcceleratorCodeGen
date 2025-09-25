@@ -227,8 +227,8 @@ def run_sdfg_in_tempdir(combo, extra_arr, extra_interleaver):
     execution_period_ns = None
 
     tmp_dir = "."
-    A_host = np.fromfunction(lambda i, j: i + j, (M_val, K_val), dtype=DTYPE_INPUT)
-    B_host = np.fromfunction(lambda i, j: 2*i + 2*j, (K_val, N_val), dtype=DTYPE_INPUT)
+    A_host = np.fromfunction(lambda i, j: i + j*K_val, (M_val, K_val), dtype=DTYPE_INPUT)
+    B_host = np.fromfunction(lambda i, j: 2*i + 2*j*K_val, (K_val, N_val), dtype=DTYPE_INPUT)
     C_host = np.ones((M_val, N_val), dtype=DTYPE_OUTPUT)
 
     A_handler = InterleaveHandler(array=A_host, block_shape=(hwM, hwK), cluster_dims=thread_group_dims)

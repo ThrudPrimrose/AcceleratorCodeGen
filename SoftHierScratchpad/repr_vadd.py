@@ -27,12 +27,12 @@ vadd_sdfg = vadd_dace.to_sdfg()
 class SoftHierConfig:
     """Configuration class for SoftHier parameters"""
     def __init__(self):
-        self.hbm_node_addr_space = 0x20000000
+        self.hbm_node_addr_space = 0x04000000
         self.hbm_node_addr_base = 0xc0000000
         self.thread_group_dims = (4, 4)
-        self.hbm_placement = "4,0,0,4"
+        self.hbm_placement = "4,4,4,4"
         self.hbm_node_per_ctrl = 1
-        self.total_tcdm_size = 0x08000000
+        self.total_tcdm_size = 0x00100000
         self.redmule_h = 64
         self.redmule_w = 32
         self.redmule_ce_pipe = 1
@@ -222,8 +222,10 @@ def get_path(binary_name):
         return parts[1]
     return None
 
-hbm_node_addr_space = 0x20000000
+
+hbm_node_addr_space = 0x04000000
 hbm_node_addr_base  = 0xc0000000
+total_tcdm_size = 0x00100000
 script_start_time=time.time()
 SLURM_JOB_ID = str(os.environ.get("SLURM_JOB_ID"))
 max_procs = int(os.environ.get("MAX_PROCS", 4))
@@ -250,10 +252,10 @@ print(os.environ["PATH"])
 
 if __name__ == "__main__":
     # Example parameter lists
-    thread_group_dims = (4, 4)
-    hbm_placement = "4,0,0,4"
+    thread_group_dims = (2, 2)
+    hbm_placement = "2,2,2,2"
     hbm_node_per_ctrl = 1
-    total_tcdm_size = 0x08000000
+    total_tcdm_size = 0x00100000
     dim_x = thread_group_dims[0]
     dim_y = thread_group_dims[1]
     redmule_h = 64
@@ -292,5 +294,3 @@ if __name__ == "__main__":
     combo = (512,512,512,64,64,128, thread_group_dims, tcdm_size)
 
     run_sdfg_in_tempdir(combo)
-    
-    
